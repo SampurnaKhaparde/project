@@ -1,0 +1,70 @@
+import requests
+from bs4 import BeautifulSoup
+import json
+import csv
+
+class WebScraper:
+    def __init__(self, url, output_format="json"):
+        self.url = url
+        self.output_format = output_format.lower()
+        self.data = []
+
+    def fetch_content(self):
+        """Fetch the HTML content of the website."""
+        try:
+            response = requests.get(self.url, timeout=10)
+            response.raise_for_status()
+            return response.text
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching the website: {e}")
+            return None
+
+    def parse_content(self, html):
+        """Parse the HTML content to extract relevant information."""
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # Example: Extracting headlines and their links
+        for headline in soup.find_all('h2'):  # Adjust the tag for the specific site
+            link = headline.find('a')
+            if link and link.get('href'):
+                self.data.append({
+                    'headline': headline.get_text(strip=True),
+                    'link': link['href']
+                })
+
+    def save_to_json(self):
+        """Save the data to a JSON file."""
+        with open('scraped_data.json', 'w', encoding='utf-8') as json_file:
+            json.dump(self.data, json_file, ensure_ascii=False, indent=4)
+        print("Data saved to scraped_data.json")
+
+    def save_to_csv(self):
+        """Save the data to a CSV file."""
+        with open('scraped_data.csv', 'w', newline='', encoding='utf-8') as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=['headline', 'link'])
+            writer.writeheader()
+            writer.writerows(self.data)
+        print("Data saved to scraped_data.csv")
+
+    def save_data(self):
+        """Save the data in the specified format."""
+        if self.output_format == 'json':
+            self.save_to_json()
+        elif self.output_format == 'csv':
+            self.save_to_csv()
+        else:
+            print(f"Unsupported output format: {self.output_format}")
+
+    def run(self):
+        """Run the web scraper."""
+        html_content = self.fetch_content()
+        if html_content:
+            self.parse_content(html_content)
+            self.save_data()
+
+# Example usage:
+if __name__ == "__main__":
+    url = input("Enter the URL to scrape: ")
+    output_format = input("Enter the output format (json/csv): ")
+    scraper = WebScraper(url, output_format)
+    scraper.run()
